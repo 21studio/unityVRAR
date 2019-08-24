@@ -1,0 +1,105 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+
+public class EyeCast : MonoBehaviour
+{
+    private Ray ray;
+    private RaycastHit hit;
+    private Transform camTr;
+    private Image crossHair;
+    private Animator anim;
+
+    private GameObject currButton;
+    private GameObject prevButton;
+    
+    public float selectedTime = 1.0f;
+    private float passedTime = 0.0f;
+    private Image circleBar;
+    private bool isClicked = false;
+
+    void Start()
+    {
+        camTr = GetComponent<Transform>();
+        crossHair = camTr.Find("Canvas/Image").GetComponent<Image>();
+        anim = crossHair.GetComponent<Animator>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        ray = new Ray(camTr.position, camTr.forward);
+        Debug.DrawRay(ray.origin, ray.direction * 20.0f, Color.green);
+
+        if (Physics.Raycast(ray, out hit, 20.0f, 1<<8 | 1<<9))
+        {
+            MoveLookAt.isStopped = true;
+            anim.SetBool("IsLook", true);
+            GazeButton();
+        }
+        else
+        {
+            MoveLookAt.isStopped = false;
+            anim.SetBool("IsLook", false);
+            ReleaseButton();
+        }        
+    }
+
+    void GazeButton()
+    {
+        PointerEventData data = new PointerEventData(EventSystem.current);
+        if (hit.collider.gameObject.layer == 9)
+        {
+            // 현재 응시하고 있는 버튼 객체를 저장
+            currButton = hit.collider.gameObject;
+            circleBar = currButton.GetComponentsInChildren<Image>()[1]; // 0번은 parent 인 자기자신임
+
+            // 새로운 버튼을 응시한 경우
+            if (currButton != prevButton)
+            {
+                // circleBar 초기화
+                passedTime = 0.0f;
+                isClicked = false;
+                if (prevButton != null)
+                {
+                    prevButton.GetComponentsInChildren<Image>()[1].fillAmount = 0.0f;
+                }
+                
+                // 현재 버튼에 PointerEnter Event
+                ExecuteEvents.Execute(currButton, data, ExecuteEvents.pointerEnterHandler);
+                
+                // 이전 버튼에 PointerExit Event
+                ExecuteEvents.Execute(prevButton, data, ExecuteEvents.pointerExitHandler);
+                prevButton = currButton;
+            }
+            // 계속 동일한 버튼을 응시하고 있을 경우
+            else if (isClicked == false)
+            {
+                passedTime += Time.deltaTime;
+                circleBar.fillAmount = passedTime / selectedTime;
+                if (passedTime >= selectedTime)
+                {
+                    ExecuteEvents.Execute(currButton, data, ExecuteEvents.pointerClickHandler);
+                    isClicked = true;
+                }
+            }
+        }
+    }
+
+    void ReleaseButton()
+    {
+        PointerEventData data = new PointerEventData(EventSystem.current);
+
+        if (prevButton != null)
+        {
+            // circleBar 초기화
+            passedTime = 0.0f;
+            prevButton.GetComponentsInChildren<Image>()[1].fillAmount = 0.0f;
+
+            ExecuteEvents.Execute(prevButton, data, ExecuteEvents.pointerExitHandler);
+            prevButton = null;
+        }
+    }
+}

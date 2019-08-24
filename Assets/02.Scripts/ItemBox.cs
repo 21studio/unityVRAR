@@ -7,7 +7,7 @@ public class ItemBox : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     public void OnLookAt(bool isLooked)
     {
-        // MoveLookAt.isStopped = isLooked;
+        MoveLookAt.isStopped = isLooked;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -18,5 +18,10 @@ public class ItemBox : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public void OnPointerExit(PointerEventData eventData)
     {
         MoveLookAt.isStopped = false;
+    }
+
+    public void ButtonMsg(string msg)
+    {
+        Debug.Log(msg + " clieked !!!");
     }
 }
