@@ -8,6 +8,8 @@ public class MoveLookAt : MonoBehaviour
     private Transform camTr;
     public float speed = 1.0f;
 
+    public static bool isStopped = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -18,6 +20,8 @@ public class MoveLookAt : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (isStopped) return;
+        
         cc.SimpleMove(camTr.forward * speed);
     }
 }
