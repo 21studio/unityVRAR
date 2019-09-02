@@ -1,0 +1,98 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class Controller : MonoBehaviour
+{
+    public enum MoveType
+    {
+        TOUCH_PAD
+        ,TELEPORT
+    }
+    
+    public MoveType moveType = MoveType.TELEPORT;
+    
+    public Transform camTr;    
+    public Transform gearController;
+    public Animator teleportAnim;
+
+    private Ray ray;
+    private RaycastHit hit;
+    private CharacterController cc;
+    private int teleportHash = Animator.StringToHash("Teleport");
+    private bool isGrabbed = false;
+    private Transform grabObject = null;
+
+    void Start()
+    {
+        cc = GetComponent<CharacterController>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        ray = new Ray(gearController.position, gearController.forward);
+
+        // 잡기 동작        
+        if (Physics.Raycast(ray, out hit, 20.0f, 1<<11))
+        {
+            // 트리거 버튼 클릭 여부
+            if (!isGrabbed && OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger))
+            {
+                // Debug.Log("### Trigger Button Click");
+                hit.transform.GetComponent<Rigidbody>().isKinematic = true;
+                hit.transform.SetParent(gearController);
+                grabObject = hit.transform;
+                isGrabbed = true;
+            }
+        }
+
+        // 트리거 버튼 릴리스
+        if (isGrabbed && OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger))
+        {
+            grabObject.GetComponent<Rigidbody>().isKinematic = false;
+
+            grabObject.GetComponent<Rigidbody>().velocity 
+            = OVRInput.GetLocalControllerVelocity(OVRInput.Controller.RTrackedRemote);
+
+            grabObject.SetParent(null);
+            isGrabbed = false;
+        }
+        
+        // 터치패드 터치 여부
+        if (moveType == MoveType.TOUCH_PAD && OVRInput.Get(OVRInput.Button.PrimaryTouchpad))
+        {
+            // 터치패드의 좌표값
+            Vector2 pos = OVRInput.Get(OVRInput.Axis2D.PrimaryTouchpad);
+            Debug.LogFormat("### Touch position x = {0}, y = {1}", pos.x, pos.y);
+
+            if (pos.y >= 0.2f)
+            {
+                cc.SimpleMove(camTr.forward * 2.0f);
+            }
+            if (pos.y <= -0.2f)
+            {
+                cc.SimpleMove(-camTr.forward * 2.0f);
+            }
+        }
+
+        // 텔레포트 버튼 (버튼 릴리스)
+        if (moveType == MoveType.TELEPORT && OVRInput.GetUp(OVRInput.Button.PrimaryTouchpad))
+        {                        
+            if (Physics.Raycast(ray, out hit, 20.0f, 1<<10))
+            {
+                teleportAnim.GetComponent<Image>().color = Color.black;
+                // teleportAnim.SetTrigger(teleportHash);
+                transform.position = hit.point;
+                StartCoroutine(Teleport());
+            }
+        }
+    }
+
+    IEnumerator Teleport()
+    {
+        yield return new WaitForSeconds(0.2f);
+        teleportAnim.SetTrigger(teleportHash);
+    }
+}
